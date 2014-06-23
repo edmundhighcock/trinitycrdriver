@@ -13,8 +13,10 @@ class TestTrinitycrdriver < Test::Unit::TestCase
     CodeRunner.submit(Y: 'test/ifspppl', T: false, D: 'rake_test', n: '1', X: ENV['TRINITY_EXEC'])
 		@runner.update
 		CodeRunner.status(Y: 'test/ifspppl')
-		require 'trinitycrdriver/trinitycrdriver'
-		@runner.run_list[1].run_trinity
+		require 'trinitycrdriver'
+    CodeRunner.submit(Y: 'test/ifspppl', T: false, D: 'rake_test', n: '1', X: ENV['TRINITY_EXEC'])
+		CodeRunner.status(Y: 'test/ifspppl')
+		#@runner.run_list[1].run_trinity
 	end
 	def teardown
 		#FileUtils.rm_r('test/ifspppl/v')
