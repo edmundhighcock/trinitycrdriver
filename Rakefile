@@ -21,6 +21,8 @@ Jeweler::Tasks.new do |gem|
   gem.description = %Q{A gem to allow coderunner to run the trinity code directly.}
   gem.email = "edmundhighcock@users.sourceforge.net"
   gem.authors = ["Edmund Highcock"]
+	gem.files.exclude 'test/**/*'
+	gem.extensions = %w[ext/trinitycrmod/extconf.rb]
   # dependencies defined in Gemfile
 end
 Jeweler::RubygemsDotOrgTasks.new
@@ -48,4 +50,12 @@ Rake::RDocTask.new do |rdoc|
   rdoc.title = "trinitycrdriver #{version}"
   rdoc.rdoc_files.include('README*')
   rdoc.rdoc_files.include('lib/**/*.rb')
+end
+
+NAME = 'trinitycrdriver'
+
+require "rake/extensiontask"
+
+Rake::ExtensionTask.new "trinitycrdriver" do |ext|
+	  ext.lib_dir = "lib/trinitycrdriver"
 end
