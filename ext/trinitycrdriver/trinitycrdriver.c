@@ -1,21 +1,48 @@
 #include <math.h>
 #include <string.h>
 #include "code_runner_ext.h"
+#include <mpi.h>
+#include <stdbool.h>
 
+/* Taken from the ruby-mpi gem*/
+struct _Comm {
+	  MPI_Comm Comm;
+		bool free;
+};
 
-void trinitycrdriver_run_trinity(VALUE class){
+static VALUE trinitycrdriver_run_trinity(VALUE class, VALUE input_file_name, VALUE mpi_comm){
 	printf("RUNNING TRINITY!!!\n\n");
+
+	struct _Comm *comm;
+	char * input_file_name_c;
+
+	Data_Get_Struct(mpi_comm, struct _Comm, comm);
+	input_file_name_c = StringValueCStr(input_file_name);
+	run_trinity_c(input_file_name_c, comm->Comm);
+
+	/*printf("input file name was %s\n", input_file_name_c);*/
+	/**/
+	/*free(input_file_name_c);*/
+
+	
+
+	return Qnil;
 
 }
 
 void Init_trinitycrdriver()
 {
 	
+	VALUE ctrinity;
+
+	cgraph_kit = Qnil;
+	ccode_runner_gs2 = Qnil;
+	ccode_runner_ext = Qnil;
 	printf("HERE!!!\n\n");
 	ccode_runner =  RGET_CLASS_TOP("CodeRunner");
 	/*VALUE ctrinity =  RGET_CLASS_TOP("CodeRunner");*/
-	VALUE ctrinity = RGET_CLASS(ccode_runner, "Trinity");
-	rb_define_method(ctrinity, "run_trinity", trinitycrdriver_run_trinity, 0);
+  ctrinity	= RGET_CLASS(ccode_runner, "Trinity");
+	rb_define_method(ctrinity, "run_trinity", trinitycrdriver_run_trinity, 2);
 		/*rb_define_class_under(ccode_runner, "Trinity",*/
 		/*RGET_CLASS(*/
 		/*RGET_CLASS(ccode_runner, "Run"), */

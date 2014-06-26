@@ -61,4 +61,4 @@ Gemfile.lock
 .code_runner*
 .int.tmp.rb
 
-
+tmp

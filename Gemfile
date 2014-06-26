@@ -5,6 +5,7 @@ source "http://rubygems.org"
    gem "text-data-tools", ">= 1.1.3"
 	 gem "gs2crmod", ">=0.11.33"
 	 gem "trinitycrmod", ">= 0.4.7"
+	 gem "ruby-mpi", ">=0.2.0"
 
 # Add dependencies to develop your gem here.
 # Include everything needed to run rake, tests, features, etc.
