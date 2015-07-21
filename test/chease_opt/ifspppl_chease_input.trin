@@ -1,0 +1,58 @@
+
+
+
+&geometry
+geo_option = "chease"
+geo_time = 15.2
+fluxlabel_option = "aminor"
+rad_out = 0.85
+nrad = 21
+use_external_geo = .false.
+write_dbinfo = .true.
+/
+
+&species
+species_option = "chease"
+ntspec = 2
+qi = 1.0
+mi = 2.5
+deuterium = 1
+/
+
+&time
+ntstep = 20
+ntdelt = 0.1
+impfac = 1.0
+niter = 1
+errtol = 0.01
+errflr = 0.01
+flrfac = 2.0
+ntdelt_max = 100.0
+/
+
+&fluxes
+flux_option = "ifspppl"
+vtfac = 2.0
+grad_option = "tigrad"
+fork_flag = .false.
+subfolders = .true.
+/
+
+&physics
+include_neo = .true.
+turb_heat = .false.
+temp_equil = .true.
+/
+
+&sources
+source_option = "analytic"
+powerin=5.0
+write_pwr_profs = .true.
+include_radiation = .true.
+include_alphas = .true.
+tritium_fraction = 0.5
+/
+
+&init
+init_option = "chease"
+/

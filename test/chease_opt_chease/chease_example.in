@@ -1,0 +1,95 @@
+! Example CHEASE namelist - circular flux surfaces, 80% of ballooning
+!                         - parabolic pressure & q
+! Equation references are from Lutjens, et al, Comp Phys Comm 97, 219-260 (1996)
+! E Highcock 2012 (edmundhighcock@sourceforge.net)
+
+
+&eqdata
+
+ !             Specify outer surface: 
+ nsurf = 1 !        Use Solevev -- eq (48)
+ nsurf = 4 !        Use INTOR formula ... eq (49)
+ elong = 1.35 !          kappa 
+ aspct = 0.27 !       aspect ratio
+ rc = 1.0
+ triang = 0.0
+ beans = 0.0
+ delta = 0.5
+ sgma = 1.3
+ nsym = 0
+ xi = 8.0e-4
+ theta0 = -1.57
+
+
+ !             Specify pressure profile
+! nppfun = 1 !       Use polynomial -- eq (52)
+! nsour = 3 !           of order 2
+ nppfun = 2 !       Use  combination of polynomials...
+ npp = 1
+! ap = 0.16,1,-1 !          p' = 0 + x + 0*x^2 = x = 1 - psi / psi_min
+ ap = 0.3,0.5,0.4,0.0,0.4,0.0,0.0  !          p' = 0 + x + 0*x^2 = x = 1 - psi / psi_min
+
+ !             Specify current profile
+ nsttp = 2 !        Specify I* -- surface averaged toroidal current, eq (7)
+ nfunc = 1 !        Use polynomial (must be same order as p' func)
+ nfunc = 2 !        Use 
+ nipr = 1
+! at = 0.5,0.5,0.4 !       I* = 1 + 0 * x - x^2 = 1 - x^2 = 1 - (1 - psi/psi_min_)**2
+! at = 1,0,-1 !       I* = 1 + 0 * x - x^2 = 1 - x^2 = 1 - (1 - psi/psi_min_)**2
+ at = 0.16,1.0,1.0,-1.1,-1.1 !       I* = 1 + 0 * x - x^2 = 1 - x^2 = 1 - (1 - psi/psi_min_)**2
+
+ !             Specify ballooning criterion
+ nblopt = 0 !       Optimise for ballooning
+ cfbal = 0.2 !      find p profile at 80% of ballooning stability
+ nbal = 1 !         ?? Flag related to ballooning stability
+ nblc0 = 8 !        Number of values used for chi_0 (eq 17)
+ nppr = 20 !        Number of s values where p' is modified
+
+ !             Grid sizes
+ npsi = 40 !        Number of surfaces
+ ns = 30 !          Number of s values (internal flux surface coord)
+ nt = 30 !          Number of theta values (internal poloidal angle)
+ nrbox = 400 !      Number of R values for gridded output (e.g EQDSK)
+ nzbox = 400 !      Number of Z values for gridded output
+ niso = 200
+ nchi = 200 !       Num values of generalised poloidal angle for stability calcs.
+
+ !             Mesh densification at theta = -1.57 (-pi/2)
+ nmeshd = 1   ! Label densification rule - d
+ npoidd = 1   ! No. of densification points
+ dplace = -1.5707
+ dwidth = 0.157
+ solpdd = 0.6
+
+ 
+ !             Rescaling the equlibrium
+ ncscal = 1 !        Scale to give a specified value of q at one location
+ ntmf0 = 0 !        1 for T=1 at centre, 0 for T=1 at edge 
+ qspec = 2.0 !        Specify q of 2
+ csspec = 0.33 !      -- at s = 0.33 
+ ndift = 1
+               !           s =  sqrt( (psi_edge - psi)/(psi_edge - psi0) )
+ nrscal = 0 !       Specify rmaj = 1 at centre
+
+ !             Output
+ nideal = 9 !       1 for ERRATO, 6 for EQDSK
+
+ !             Solver
+ epslon = 1.e-8 !   Solver accuray
+ ninsca = 20 !      Number iterations over nonlinearity
+ ninmap = 20 !      Number of iterations over current profile
+
+ 
+
+ !             Misc
+ nsym = 1 !         Enforces updown symmetric ?
+ nopt = 0 !         Don't read stored eq
+ nplot = 1 !        Output quantities for plotting??
+ negp = 0 !        |nabla psi| exponent in Jacobian (i.e. sign of psi??) 
+ ner = 2 !          R exponent in Jacobian -- leave !
+
+ 
+
+
+/  
+
