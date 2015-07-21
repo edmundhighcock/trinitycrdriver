@@ -6,6 +6,7 @@ source "http://rubygems.org"
 	 gem "gs2crmod", ">=0.11.33"
 	 gem "trinitycrmod", ">= 0.4.7"
 	 gem "ruby-mpi", ">=0.2.0"
+	 gem "cheasecrmod", ">=0.1.0"
 
 # Add dependencies to develop your gem here.
 # Include everything needed to run rake, tests, features, etc.

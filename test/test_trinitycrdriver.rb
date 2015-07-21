@@ -61,16 +61,26 @@ class TestTrinityOptimisation < Test::Unit::TestCase
 	def tfolder
 		'test/chease_opt'
 	end
+	def tfolderchease
+		'test/chease_opt_chease'
+	end
 	def test_chease_opt
 		CodeRunner.setup_run_class('trinity')
 		require 'trinitycrdriver'
 		require 'trinitycrdriver/optimisation'
-		opt = CodeRunner::Trinity::Optimisation.new(:pfus, {trinity: {powerin: [2, 0.5], radin: [0.5, -0.1]}})
+		#opt = CodeRunner::Trinity::Optimisation.new(:pfus, {trinity: {powerin: [2, 0.5], radin: [0.5, -0.1]}})
+		#opt = CodeRunner::Trinity::Optimisation.new(:pfus, {trinity: {powerin: [2, 0.5]}, chease: {elong: [1.35, 0.2]}})
+		#opt = CodeRunner::Trinity::Optimisation.new(:pfus, {chease: {elong: [1.35, 0.2]}})
+		opt = CodeRunner::Trinity::Optimisation.new(:pfus, {chease: {elong: [1.35, 0.2], triang: [0.0, 0.1]}})
 		@trinity_runner = CodeRunner.fetch_runner(Y: tfolder, X: '/dev/null', C: 'trinity')
 		@trinity_runner.nprocs = '1'
+		@chease_runner = CodeRunner.fetch_runner(Y: tfolderchease, X: '~/Build/chease/trunk/src-f90/chease', C: 'chease')
+		@chease_runner.nprocs = '1'
 		Dir.chdir(tfolder){@trinity_runner.run_class.use_new_defaults_file('rake_test_opt', 'ifspppl_chease_input.trin')}
-		assert_equal([:trinity, :powerin], opt.optimisation_variables[0])
+		Dir.chdir(tfolderchease){@chease_runner.run_class.use_new_defaults_file('rake_test_opt_chease', 'chease_example.in')}
+		#assert_equal([:trinity, :powerin], opt.optimisation_variables[0])
 		opt.trinity_runner = @trinity_runner
+		opt.chease_runner = @chease_runner
 		opt.serial_optimise(:simplex)
 	end
 end

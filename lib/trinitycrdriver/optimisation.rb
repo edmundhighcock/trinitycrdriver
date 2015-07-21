@@ -8,6 +8,7 @@ class CodeRunner::Trinity::Optimisation
 	  attr_reader :optimisation_spec
 		attr_reader :optimisation_variables
 		attr_accessor :trinity_runner
+		attr_accessor :chease_runner
 		def initialize(optimised_quantity, optimisation_spec)
 			#@folder = folder
 			@optimised_quantity = optimised_quantity
@@ -34,7 +35,7 @@ class CodeRunner::Trinity::Optimisation
 			gsl_func = Function.alloc(func, dimension)
 			gsl_func.set_params(self)
 			opt.set(gsl_func, @optimisation_starts.to_gslv, @optimisation_steps.to_gslv)
-			6.times do 
+			20.times do 
 				opt.iterate
 				p ['status', opt.x, opt.minimum]
 			end
@@ -59,10 +60,25 @@ class CodeRunner::Trinity::Optimisation
 				#pars[:trinity][:ntstep] = 100
 			end
 
+			pars[:chease][:ap] = [0.3,0.5,0.4,0.0,0.4,0.0,0.0]
+      pars[:chease][:at] = [0.16,1.0,1.0,-1.1,-1.1]
+
 
 			trinity_runner.run_class.instance_variable_set(:@mpi_communicator, MPI::Comm::WORLD)
 		  if false and trinity_runner.run_list.size > 0
 			else
+				crun = chease_runner.run_class.new(chease_runner)
+				crun.update_submission_parameters(pars[:chease].inspect)
+				if chease_runner.run_list.size > 0
+					crun.restart_id = @cid
+				end
+				chease_runner.submit(crun)
+				crun = chease_runner.run_list[@cid = chease_runner.max_id]
+				crun.recheck
+				chease_runner.update
+				chease_runner.print_out(0)
+				FileUtils.cp(crun.directory + '/ogyropsi.dat', trinity_runner.root_folder + '/.')
+
 				run = trinity_runner.run_class.new(trinity_runner)
 				run.update_submission_parameters(pars[:trinity].inspect)
 				#trinity_runner.run_class.instance_variable_set(:@delay_execution, true)
