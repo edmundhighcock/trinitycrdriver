@@ -64,7 +64,15 @@ class TestTrinityOptimisation < Test::Unit::TestCase
 	def tfolderchease
 		'test/chease_opt_chease'
 	end
+  def cleanup
+    FileUtils.rm(ENV['HOME'] + '/.coderunner/trinitycrmod/defaults_files/rake_test_opt_defaults.rb') 
+    FileUtils.rm(ENV['HOME'] +'/.coderunner/cheasecrmod/defaults_files/rake_test_opt_chease_defaults.rb') rescue nil
+    FileUtils.rm('test/chease_opt/submitting') rescue nil
+    FileUtils.rm_r('test/chease_opt/v') rescue nil
+    FileUtils.rm_r('test/chease_opt_chease/v') rescue nil
+  end
 	def test_chease_opt
+    cleanup
 		CodeRunner.setup_run_class('trinity')
 		require 'trinitycrdriver'
 		require 'trinitycrdriver/optimisation'
