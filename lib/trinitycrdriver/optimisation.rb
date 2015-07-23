@@ -22,8 +22,7 @@ class CodeRunner::Trinity::Optimisation
 		def dimension
 			@optimisation_variables.size
 		end
-		def serial_optimise(optimisation_method)
-		  MPI.Init
+		def serial_optimise(optimisation_method, parameters_obj)
 			optimisation_meth = case optimisation_method
 													when :simplex
 														FMinimizer::NMSIMPLEX
@@ -35,9 +34,9 @@ class CodeRunner::Trinity::Optimisation
 			gsl_func = Function.alloc(func, dimension)
 			gsl_func.set_params(self)
 			opt.set(gsl_func, @optimisation_starts.to_gslv, @optimisation_steps.to_gslv)
-			20.times do 
+			parameters_obj.nit.times do |i|
 				opt.iterate
-				p ['status', opt.x, opt.minimum]
+				p ['status', opt.x, opt.minimum, i, parameters_obj.nit]
 			end
 
 			p 'heellllllo'
@@ -76,7 +75,7 @@ class CodeRunner::Trinity::Optimisation
 				crun = chease_runner.run_list[@cid = chease_runner.max_id]
 				crun.recheck
 				chease_runner.update
-				chease_runner.print_out(0)
+				#chease_runner.print_out(0)
 				FileUtils.cp(crun.directory + '/ogyropsi.dat', trinity_runner.root_folder + '/.')
 
 				run = trinity_runner.run_class.new(trinity_runner)
@@ -89,7 +88,7 @@ class CodeRunner::Trinity::Optimisation
 				run = trinity_runner.run_list[@id = trinity_runner.max_id]
 				run.recheck
 				trinity_runner.update
-				trinity_runner.print_out(0)
+				#trinity_runner.print_out(0)
 				result =  run.send(@optimised_quantity)
 				p ['result is ', result]
 				return -result
