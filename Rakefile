@@ -22,7 +22,7 @@ Jeweler::Tasks.new do |gem|
   gem.email = "edmundhighcock@users.sourceforge.net"
   gem.authors = ["Edmund Highcock"]
 	gem.files.exclude 'test/**/*'
-	gem.extensions = %w[ext/trinitycrmod/extconf.rb]
+	gem.extensions = %w[ext/trinitycrdriver/extconf.rb]
   # dependencies defined in Gemfile
 end
 Jeweler::RubygemsDotOrgTasks.new
