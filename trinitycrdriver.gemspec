@@ -3,7 +3,7 @@
 # Instead, edit Jeweler::Tasks in Rakefile, and run 'rake gemspec'
 # -*- encoding: utf-8 -*-
 # stub: trinitycrdriver 0.1.0 ruby lib
-# stub: ext/trinitycrmod/extconf.rb
+# stub: ext/trinitycrdriver/extconf.rb
 
 Gem::Specification.new do |s|
   s.name = "trinitycrdriver"
@@ -15,7 +15,7 @@ Gem::Specification.new do |s|
   s.date = "2015-07-23"
   s.description = "A gem to allow coderunner to run the trinity code directly."
   s.email = "edmundhighcock@users.sourceforge.net"
-  s.extensions = ["ext/trinitycrmod/extconf.rb"]
+  s.extensions = ["ext/trinitycrdriver/extconf.rb"]
   s.extra_rdoc_files = [
     "LICENSE.txt",
     "README.rdoc"
