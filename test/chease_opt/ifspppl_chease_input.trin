@@ -20,7 +20,7 @@ deuterium = 1
 /
 
 &time
-ntstep = 20
+ntstep = 10
 ntdelt = 0.1
 impfac = 1.0
 niter = 1
@@ -46,7 +46,7 @@ temp_equil = .true.
 
 &sources
 source_option = "analytic"
-powerin=5.0
+powerin=1.0
 write_pwr_profs = .true.
 include_radiation = .true.
 include_alphas = .true.
