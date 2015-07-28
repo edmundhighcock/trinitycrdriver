@@ -10,15 +10,19 @@ struct _Comm {
 		bool free;
 };
 
-static VALUE trinitycrdriver_run_trinity(VALUE class, VALUE input_file_name, VALUE mpi_comm){
+static VALUE trinitycrdriver_run_trinity(VALUE self, VALUE input_file_name, VALUE mpi_comm){
 	printf("RUNNING TRINITY!!!\n\n");
 
 	struct _Comm *comm;
 	char * input_file_name_c;
 
 	Data_Get_Struct(mpi_comm, struct _Comm, comm);
-	input_file_name_c = StringValueCStr(input_file_name);
-	run_trinity_c(input_file_name_c, comm->Comm);
+
+  /*RFCALL_12("run_trin_actual", input_file_name, INT2FIX(comm->Comm));*/
+  rb_funcall(self, rb_intern("run_trin_actual2"), 2, input_file_name, INT2FIX(comm->Comm));
+  
+  /*input_file_name_c = StringValueCStr(input_file_name);*/
+  /*run_trinity_c(input_file_name_c, comm->Comm);*/
 
 	/*printf("input file name was %s\n", input_file_name_c);*/
 	/**/
