@@ -1,4 +1,4 @@
-
+require 'mpi'
 class CodeRunner
 	#  This is a customised subclass of the CodeRunner::Run  class  which is designed to run the CodeRunner/Trinity optimisation framework
 	#
@@ -26,7 +26,9 @@ class CodeRunner
       :search,
       :trinity_defaults,
       :gs_defaults,
-      :nit
+      :nit,
+      :ntstep_first,
+      :ntstep
     ]
 
 		@uses_mpi = true
@@ -36,7 +38,7 @@ class CodeRunner
 		@naming_pars = []
 
 		#  Any folders which are a number will contain the results from flux simulations.
-		@excluded_sub_folders = ['trinity_runs', 'chease_runs', 'ecom_runs']
+		@excluded_sub_folders = ['trinity_runs', 'gs_runs']
 
 		#  A hook which gets called when printing the standard run information to the screen using the status command.
 		def print_out_line
@@ -81,19 +83,66 @@ class CodeRunner
         File.open("driver_script.rb", "w"){|f| f.puts optimisation_script}
         FileUtils.makedirs('trinity_runs')
         FileUtils.makedirs('gs_runs')
-        FileUtils.ln_s("../../#{@trinity_defaults}_defaults.rb", "trinity_runs")
-        FileUtils.ln_s("../../#{@gs_defaults}_defaults.rb", "gs_runs")
+        #FileUtils.ln_s("../../#{@trinity_defaults}_defaults.rb", "trinity_runs")
+        #FileUtils.ln_s("../../#{@gs_defaults}_defaults.rb", "gs_runs")
         save
 		end
 
     def optimisation_script
       return <<EOF
-      require 'coderunner'
-      CodeRunner.setup_run_class('trinity')
-      CodeRunner.setup_run_class('trinopt')
-      require 'trinitycrdriver'
-      require 'trinitycrdriver/optimisation'
-      CodeRunner::Trinopt.run_optimisation(#@id)
+      require 'mpi'
+      class MPI::Comm
+        def Bcast_string(str)
+          @arr = NArray.int(1)
+          if rank==0
+            @arr[0] = str.length
+            Bcast(@arr, 0)
+            Bcast(str, 0)
+          else
+            Bcast(@arr,0)
+            str << " " while str.length < @arr[0]
+            Bcast(str,0)
+          end
+        end
+      end
+      puts 'Initializing mpi'
+		  MPI.Init
+      comm = MPI::Comm::WORLD
+      rank = comm.rank
+      puts ['Rank is: ', rank]
+      if rank==0
+        begin
+          require 'coderunner'
+          CodeRunner.setup_run_class('trinity')
+          CodeRunner.setup_run_class('trinopt')
+          require 'trinitycrdriver'
+          require 'trinitycrdriver/optimisation'
+          CodeRunner::Trinopt.run_optimisation(#@id)
+        rescue
+        end
+        arr = NArray.int(1)
+        arr[0] = 0
+        comm.Bcast(arr,0)
+      else
+        require 'trinitycrdriver'
+        arr = NArray.int(1)
+        puts "Proc \#{comm.rank} waiting for message"
+        loop do
+          comm.Bcast(arr, 0)
+          puts "Proc \#{comm.rank} received instructions: \#{arr[0]}"
+          dir = ""
+          run_name  = ""
+          if arr[0] == 1
+            comm.Bcast_string(dir)
+            comm.Bcast_string(run_name)
+            puts "Proc \#{comm.rank} calling Trinity with run_name: \#{run_name}"
+            Dir.chdir(dir){CodeRunner::Trinity.new.run_trinity(run_name+'.trin', comm)}
+          else
+            break
+          end
+        end
+      end
+      MPI.Finalize
 EOF
     end
 
@@ -102,25 +151,32 @@ EOF
 
 
     def self.run_optimisation(id = ARGV[-1])
-		  MPI.Init
-      @runner = CodeRunner.fetch_runner(Y: '../../', U: true)
-      #@run = @runner.run_list[id.to_i]
-      @run = self.load(Dir.pwd, @runner)
-      #raise "Can't find run with id #{id}; #{@runner.run_list.keys}" unless @run
-      opt = CodeRunner::Trinity::Optimisation.new(
-        @run.output, @run.search
-      )
-      @trinity_runner = CodeRunner.fetch_runner(Y: 'trinity_runs', X: '/dev/null', C: 'trinity', D: @run.trinity_defaults)
-      @trinity_runner.nprocs = MPI::Comm::WORLD.size
-      @chease_runner = CodeRunner.fetch_runner(Y: 'gs_runs', X: @run.chease_exec, C: 'chease', D: @run.gs_defaults)
-      @chease_runner.nprocs = '1'
-      #Dir.chdir('trinity_runs'){@trinity_runner.run_class.use_new_defaults_file('rake_test_opt', 'ifspppl_chease_input.trin')}
-      #Dir.chdir(tfolderchease){@chease_runner.run_class.use_new_defaults_file('rake_test_opt_chease', 'chease_example.in')}
-      #assert_equal([:trinity, :powerin], opt.optimisation_variables[0])
-      opt.trinity_runner = @trinity_runner
-      opt.chease_runner = @chease_runner
-      opt.serial_optimise(:simplex, @run)
-      MPI.Finalize
+        eputs 'Fetching runner'
+        @runner = CodeRunner.fetch_runner(Y: '../../', U: true)
+        eputs 'Got runner'
+        #@run = @runner.run_list[id.to_i]
+        @run = self.load(Dir.pwd, @runner)
+        #@run = self.new(nil)
+        #@run.instance_eval(File.read('code_runner_info.rb'))
+        eputs 'Loaded run'
+        #raise "Can't find run with id #{id}; #{@runner.run_list.keys}" unless @run
+        opt = CodeRunner::Trinity::Optimisation.new(
+          @run.output, @run.search
+        )
+        opt.results_hash[:start_time] = Time.now.to_i
+        eputs 'Created opt'
+        @trinity_runner = CodeRunner.fetch_runner(Y: 'trinity_runs', X: '/dev/null', C: 'trinity', D: @run.trinity_defaults)
+        @trinity_runner.nprocs = MPI::Comm::WORLD.size
+        eputs 'Got trinity runner'
+        @chease_runner = CodeRunner.fetch_runner(Y: 'gs_runs', X: @run.chease_exec, C: 'chease', D: @run.gs_defaults)
+        @chease_runner.nprocs = '1'
+        eputs 'Got chease runner'
+        #Dir.chdir('trinity_runs'){@trinity_runner.run_class.use_new_defaults_file('rake_test_opt', 'ifspppl_chease_input.trin')}
+        #Dir.chdir(tfolderchease){@chease_runner.run_class.use_new_defaults_file('rake_test_opt_chease', 'chease_example.in')}
+        #assert_equal([:trinity, :powerin], opt.optimisation_variables[0])
+        opt.trinity_runner = @trinity_runner
+        opt.chease_runner = @chease_runner
+        opt.serial_optimise(:simplex, @run)
     end
 
 

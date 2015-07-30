@@ -21,8 +21,12 @@ class CodeRunner::Trinity
 	# Instead of running trinity via a bash command or a batch script,
 	# we run it directly via its API.
 	@delay_execution = false
+  def queue_status
+    ""
+  end
 	def execute
 		if rcp.delay_execution
+      eputs 'Delaying execution...'
 			return
 		else
 			execute_actual

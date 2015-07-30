@@ -1,4 +1,10 @@
+CodeRunner.setup_run_class('chease')
 
+class CodeRunner::Chease
+  def execute
+    system "#{executable}"
+  end
+end
 class CodeRunner::Trinity::Optimisation
   include GSL::MultiMin
     # optimisation_spec is a hash of {:code_name => {:variable => [initial_guess, dimension_scale_factor]}}
@@ -9,6 +15,8 @@ class CodeRunner::Trinity::Optimisation
     attr_reader :optimisation_variables
     attr_accessor :trinity_runner
     attr_accessor :chease_runner
+    attr_accessor :parameters_obj
+    attr_accessor :results_hash
     def initialize(optimised_quantity, optimisation_spec)
       #@folder = folder
       @optimised_quantity = optimised_quantity
@@ -18,6 +26,7 @@ class CodeRunner::Trinity::Optimisation
       @optimisation_steps     = optimisation_spec.map{|code, hash| hash.map{|var, pars| pars[1]}}.flatten(1)
       #@runner = CodeRunner.fetch_runner(
       #p ['optimisation_variables', @optimisation_variables]
+      @results_hash = {}
     end
     def dimension
       @optimisation_variables.size
@@ -29,18 +38,27 @@ class CodeRunner::Trinity::Optimisation
                           else 
                             raise "Unknown optimisation_method"
                           end
+      @results_hash[:start_time] = Time.now.to_i
       opt = FMinimizer.alloc(optimisation_meth, @optimisation_variables.size)
+      @parameters_obj = parameters_obj
       func = Proc.new{|v, optimiser| optimiser.func(v)}
+      eputs 'Created func'
       gsl_func = Function.alloc(func, dimension)
       gsl_func.set_params(self)
       opt.set(gsl_func, @optimisation_starts.to_gslv, @optimisation_steps.to_gslv)
+      eputs 'Set func and starting iteration'
       parameters_obj.nit.times do |i|
         opt.iterate
         p ['status', opt.x, opt.minimum, i, parameters_obj.nit]
+        @results_hash[:iterations] ||= []
+        @results_hash[:iterations].push [opt.x, opt.minimum]
+        @results_hash[:elapse_mins] = (Time.now.to_i - @results_hash[:start_time]).to_f/60
+        @results_hash[:current_time] = Time.now.to_i
+        File.open('results', 'w'){|f| f.puts @results_hash.pretty_inspect}
       end
 
       p 'heellllllo'
-      MPI.Finalize
+      #MPI.Finalize
       
     end
     def func(v)
@@ -53,10 +71,13 @@ class CodeRunner::Trinity::Optimisation
         pars[code][varname] = val
       end
       if not @first_run_done
-        pars[:trinity][:ntstep] = 300
+        pars[:trinity][:ntstep] = @parameters_obj.ntstep_first
+        pars[:trinity][:nifspppl_initial] = 500
+        pars[:trinity][:niter] = 1
       else
-        #pars[:trinity].delete(:ntstep)
-        pars[:trinity][:ntstep] = 100
+        pars[:trinity][:ntstep] = @parameters_obj.ntstep
+        pars[:trinity][:nifspppl_initial] = -1
+        pars[:trinity][:niter] = 3
       end
 
       pars[:chease][:ap] = [0.3,0.5,0.4,0.0,0.4,0.0,0.0]
@@ -88,13 +109,33 @@ class CodeRunner::Trinity::Optimisation
         run.update_submission_parameters(pars[:trinity].inspect)
         run.gs_folder = crun.directory
         run.evolve_geometry = ".true."
-        #trinity_runner.run_class.instance_variable_set(:@delay_execution, true)
+        eputs ['Set gs_folder', run.gs_folder]
+        trinity_runner.run_class.instance_variable_set(:@delay_execution, true)
         if trinity_runner.run_list.size > 0
           run.restart_id = @id
+        else
         end
+        eputs 'Submitting run'
         trinity_runner.submit(run)
         run = trinity_runner.run_list[@id = trinity_runner.max_id]
-        run.recheck
+        comm = MPI::Comm::WORLD
+        arr = NArray.int(1)
+        arr[0] = 1
+        eputs 'Sending message'
+        comm.Bcast(arr,0)
+        comm.Bcast_string(run.directory)
+        comm.Bcast_string(run.run_name)
+        eputs 'Running trinity'
+        Dir.chdir(run.directory){run.run_trinity(run.run_name+'.trin', comm)}
+        eputs 'Rechecking'
+        trinity_runner.update
+        eputs 'Queue', run.queue_status
+        Dir.chdir(run.directory) do
+          run.recheck
+          run.status = :Complete
+          run.get_global_results
+        end
+        
         trinity_runner.update
         #trinity_runner.print_out(0)
         result =  run.send(@optimised_quantity)
