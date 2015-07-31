@@ -61,6 +61,8 @@ class CodeRunner
 					warning("---#{var_name}---, specified in #{File.expand_path(filename)}, is not a variable. This could be an error")
 				end
 			end
+      eputs '@nstep_is', @nstep
+      eputs '@nstep_first', @nstep_first
 		end
 
 		#  A hook which gets called when printing the standard run information to the screen using the status command.
@@ -89,23 +91,24 @@ class CodeRunner
 			new_run.is_a_restart = true
 			new_run.restart_id = @id
 			new_run.restart_run_name = @run_name
-			new_run.nopt = -1
 			new_run.run_name = nil
 			new_run.naming_pars = @naming_pars
 			new_run.update_submission_parameters(new_run.parameter_hash.inspect, false) if new_run.parameter_hash 
 			new_run.naming_pars.delete(:restart_id)
 			new_run.generate_run_name
-      raise "This function is not complete"
+      FileUtils.ln_s(@directory + '/trinity_runs', new_run.directory + '/trinity_runs')
+      FileUtils.ln_s(@directory + '/gs_runs', new_run.directory + '/gs_runs')
 		end	
 		#  This is a hook which gets called just before submitting a simulation. It sets up the folder and generates any necessary input files.
 		def generate_input_file
 				check_parameters
 				if @restart_id
 					@runner.run_list[@restart_id].restart(self)
+        else
+          FileUtils.makedirs('trinity_runs')
+          FileUtils.makedirs('gs_runs')
 				end
         File.open("driver_script.rb", "w"){|f| f.puts optimisation_script}
-        FileUtils.makedirs('trinity_runs')
-        FileUtils.makedirs('gs_runs')
         #FileUtils.ln_s("../../#{@trinity_defaults}_defaults.rb", "trinity_runs")
         #FileUtils.ln_s("../../#{@gs_defaults}_defaults.rb", "gs_runs")
         save

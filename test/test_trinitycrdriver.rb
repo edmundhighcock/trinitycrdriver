@@ -108,6 +108,7 @@ class TestTrinityOptimisation < Test::Unit::TestCase
         f.puts "@trinity_defaults_strings.push(#{File.read('trinity_trinopt_defaults.rb').inspect})\n@gs_defaults_strings.push(#{File.read('chease_trinopt_defaults.rb').inspect})"
       end
       CodeRunner.submit(n: '1', C: 'trinopt', D: 'testtrinopt', X: "#$ruby_command", p: "{code_run_environment: %[export RUBYOPT=-I'#{Dir.pwd}/../../lib/']}") 
+      CodeRunner.submit(n: '1', C: 'trinopt', D: 'testtrinopt', X: "#$ruby_command", p: "{code_run_environment: %[export RUBYOPT=-I'#{Dir.pwd}/../../lib/'], restart_id: 1, nit: 3}") 
 
     end
   end

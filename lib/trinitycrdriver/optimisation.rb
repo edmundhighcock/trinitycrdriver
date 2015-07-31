@@ -53,7 +53,7 @@ class CodeRunner::Trinity::Optimisation
         opt.iterate
         p ['status', opt.x, opt.minimum, i, parameters_obj.nit]
         @results_hash[:iterations] ||= []
-        @results_hash[:iterations].push [opt.x, opt.minimum]
+        @results_hash[:iterations].push [opt.x.dup, opt.minimum]
         @results_hash[:elapse_mins] = (Time.now.to_i - @results_hash[:start_time]).to_f/60
         @results_hash[:current_time] = Time.now.to_i
         File.open('results', 'w'){|f| f.puts @results_hash.pretty_inspect}
@@ -64,6 +64,7 @@ class CodeRunner::Trinity::Optimisation
       
     end
     def func(v)
+      eputs 'Starting func'
       pars = {}
       pars[:chease] = {}
       pars[:trinity] = {}
@@ -89,65 +90,90 @@ class CodeRunner::Trinity::Optimisation
       trinity_runner.run_class.instance_variable_set(:@mpi_communicator, MPI::Comm::WORLD)
       if false and trinity_runner.run_list.size > 0
       else
-        crun = chease_runner.run_class.new(chease_runner)
-        raise "No gs_defaults strings" unless @parameters_obj.gs_defaults_strings.size > 0
-        @parameters_obj.gs_defaults_strings.each{|prc| crun.instance_eval(prc)}
-        crun.update_submission_parameters(pars[:chease].inspect, false)
         if @first_run_done
           #crun.nppfun=4
           #crun.neqdsk=0
           #crun.expeq_file = trinity_runner.run_list[@id]
         end
-        if chease_runner.run_list.size > 0
-          crun.restart_id = @cid
+        if not @replay
+          if not @first_run_done and chease_runner.run_list.size > 0
+            #This means we are in a restart
+            @replay = true
+            @nrun = 1
+          else
+            @nrun = nil
+            @replay = false
+          end
         end
-        chease_runner.submit(crun)
-        crun = chease_runner.run_list[@cid = chease_runner.max_id]
-        crun.recheck
-        chease_runner.update
-        #chease_runner.print_out(0)
-        #FileUtils.cp(crun.directory + '/ogyropsi.dat', trinity_runner.root_folder + '/.')
-
-        run = trinity_runner.run_class.new(trinity_runner)
-
-        raise "No trinity_defaults_strings" unless @parameters_obj.trinity_defaults_strings.size > 0
-        run.instance_variable_set(:@set_flux_defaults_procs, []) unless run.instance_variable_get(:@set_flux_defaults_procs)
-        @parameters_obj.trinity_defaults_strings.each{|prc| run.instance_eval(prc)}
-        run.update_submission_parameters(pars[:trinity].inspect, false)
-        run.gs_folder = crun.directory
-        run.evolve_geometry = ".true."
-        eputs ['Set gs_folder', run.gs_folder]
-        trinity_runner.run_class.instance_variable_set(:@delay_execution, true)
-        if trinity_runner.run_list.size > 0
-          run.restart_id = @id
-        else
+        if @replay
+          eputs 'Replaying: ' + @nrun.to_s
+          run = trinity_runner.run_list[@nrun]
+          if not run
+            eputs 'Ending replay at ' + @nrun.to_s
+            @replay = false
+            @id = @cid = @nrun-1
+          end
+          @nrun += 1
         end
-        eputs 'Submitting run'
-        trinity_runner.submit(run)
-        run = trinity_runner.run_list[@id = trinity_runner.max_id]
-        comm = MPI::Comm::WORLD
-        arr = NArray.int(1)
-        arr[0] = 1
-        eputs 'Sending message'
-        comm.Bcast(arr,0)
-        comm.Bcast_string(run.directory)
-        comm.Bcast_string(run.run_name)
-        eputs 'Running trinity'
-        Dir.chdir(run.directory){run.run_trinity(run.run_name+'.trin', comm)}
-        eputs 'Rechecking'
-        trinity_runner.update
-        eputs 'Queue', run.queue_status
+        if not @replay
+          crun = chease_runner.run_class.new(chease_runner)
+          raise "No gs_defaults strings" unless @parameters_obj.gs_defaults_strings.size > 0
+          @parameters_obj.gs_defaults_strings.each{|prc| crun.instance_eval(prc)}
+          crun.update_submission_parameters(pars[:chease].inspect, false)
+
+          if chease_runner.run_list.size > 0
+            crun.restart_id = @cid
+          end
+          chease_runner.submit(crun)
+          crun = chease_runner.run_list[@cid = chease_runner.max_id]
+          crun.recheck
+          chease_runner.update
+          #chease_runner.print_out(0)
+          #FileUtils.cp(crun.directory + '/ogyropsi.dat', trinity_runner.root_folder + '/.')
+
+          run = trinity_runner.run_class.new(trinity_runner)
+
+          raise "No trinity_defaults_strings" unless @parameters_obj.trinity_defaults_strings.size > 0
+          run.instance_variable_set(:@set_flux_defaults_procs, []) unless run.instance_variable_get(:@set_flux_defaults_procs)
+          @parameters_obj.trinity_defaults_strings.each{|prc| run.instance_eval(prc)}
+          run.update_submission_parameters(pars[:trinity].inspect, false)
+          run.gs_folder = crun.directory
+          run.evolve_geometry = ".true."
+          eputs ['Set gs_folder', run.gs_folder]
+          trinity_runner.run_class.instance_variable_set(:@delay_execution, true)
+          if trinity_runner.run_list.size > 0
+            run.restart_id = @id
+          else
+          end
+          eputs 'Submitting run'
+          trinity_runner.submit(run)
+          run = trinity_runner.run_list[@id = trinity_runner.max_id]
+          comm = MPI::Comm::WORLD
+          arr = NArray.int(1)
+          arr[0] = 1
+          eputs 'Sending message'
+          comm.Bcast(arr,0)
+          comm.Bcast_string(run.directory)
+          comm.Bcast_string(run.run_name)
+          eputs 'Running trinity'
+          Dir.chdir(run.directory){run.run_trinity(run.run_name+'.trin', comm)}
+          eputs 'Rechecking'
+          trinity_runner.update
+          eputs 'Queue', run.queue_status
+          
+          trinity_runner.update
+        end
+        #trinity_runner.print_out(0)
         Dir.chdir(run.directory) do
           run.recheck
           run.status = :Complete
           run.get_global_results
         end
-        
-        trinity_runner.update
-        #trinity_runner.print_out(0)
         result =  run.send(@optimised_quantity)
         p ['result is ', result]
         @first_run_done = true
+        @results_hash[:func_calls] ||=[]
+        @results_hash[:func_calls].push result
         return -result
       end
 

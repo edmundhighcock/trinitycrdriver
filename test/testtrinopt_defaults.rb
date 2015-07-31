@@ -6,4 +6,6 @@
 if not @chease_exec =~ /chease$/
   raise "Can't find chease executable in path!"
 end
+@ntstep_first = 10
+@ntstep = 5
 @nit = 2
