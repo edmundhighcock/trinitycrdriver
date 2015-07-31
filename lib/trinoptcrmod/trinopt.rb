@@ -33,7 +33,8 @@ class CodeRunner
       :gs_defaults_strings,
       :nit,
       :ntstep_first,
-      :ntstep
+      :ntstep,
+      :delete_final_run
     ]
 
 		@uses_mpi = true

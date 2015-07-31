@@ -100,6 +100,13 @@ class CodeRunner::Trinity::Optimisation
             #This means we are in a restart
             @replay = true
             @nrun = 1
+            if @parameters_obj.delete_final_run
+              eputs 'Removing final run: ' + trinity_runner.run_list.keys.max.to_s
+              trinity_runner.conditions =  'id==' + trinity_runner.run_list.keys.max.to_s
+              trinity_runner.destroy no_confirm: true
+              chease_runner.conditions =  'id==' + chease_runner.run_list.keys.max.to_s
+              chease_runner.destroy no_confirm: true
+            end
           else
             @nrun = nil
             @replay = false
