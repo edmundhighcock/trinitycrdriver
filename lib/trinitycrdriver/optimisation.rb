@@ -44,7 +44,9 @@ class CodeRunner::Trinity::Optimisation
       func = Proc.new{|v, optimiser| optimiser.func(v)}
       eputs 'Created func'
       gsl_func = Function.alloc(func, dimension)
+      eputs 'Allocated gsl_func'
       gsl_func.set_params(self)
+      eputs 'Set params'
       opt.set(gsl_func, @optimisation_starts.to_gslv, @optimisation_steps.to_gslv)
       eputs 'Set func and starting iteration'
       parameters_obj.nit.times do |i|
@@ -88,7 +90,9 @@ class CodeRunner::Trinity::Optimisation
       if false and trinity_runner.run_list.size > 0
       else
         crun = chease_runner.run_class.new(chease_runner)
-        crun.update_submission_parameters(pars[:chease].inspect)
+        raise "No gs_defaults strings" unless @parameters_obj.gs_defaults_strings.size > 0
+        @parameters_obj.gs_defaults_strings.each{|prc| crun.instance_eval(prc)}
+        crun.update_submission_parameters(pars[:chease].inspect, false)
         if @first_run_done
           #crun.nppfun=4
           #crun.neqdsk=0
@@ -106,7 +110,10 @@ class CodeRunner::Trinity::Optimisation
 
         run = trinity_runner.run_class.new(trinity_runner)
 
-        run.update_submission_parameters(pars[:trinity].inspect)
+        raise "No trinity_defaults_strings" unless @parameters_obj.trinity_defaults_strings.size > 0
+        run.instance_variable_set(:@set_flux_defaults_procs, []) unless run.instance_variable_get(:@set_flux_defaults_procs)
+        @parameters_obj.trinity_defaults_strings.each{|prc| run.instance_eval(prc)}
+        run.update_submission_parameters(pars[:trinity].inspect, false)
         run.gs_folder = crun.directory
         run.evolve_geometry = ".true."
         eputs ['Set gs_folder', run.gs_folder]

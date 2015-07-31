@@ -2,7 +2,10 @@ require 'mpi'
 class CodeRunner
 	#  This is a customised subclass of the CodeRunner::Run  class  which is designed to run the CodeRunner/Trinity optimisation framework
 	#
+  CodeRunner.setup_run_class('trinity')
+  CodeRunner.setup_run_class('chease')
 	class Trinopt < Run
+
 
 		# Where this file is
 		@code_module_folder = File.dirname(File.expand_path(__FILE__)) # i.e. the directory this file is in
@@ -25,7 +28,9 @@ class CodeRunner
       :output,
       :search,
       :trinity_defaults,
+      :trinity_defaults_strings,
       :gs_defaults,
+      :gs_defaults_strings,
       :nit,
       :ntstep_first,
       :ntstep
@@ -39,6 +44,24 @@ class CodeRunner
 
 		#  Any folders which are a number will contain the results from flux simulations.
 		@excluded_sub_folders = ['trinity_runs', 'gs_runs']
+
+    def initialize(*args)
+      @trinity_defaults_strings = []
+      @gs_defaults_strings = []
+      super(*args)
+    end
+		def evaluate_defaults_file(filename)
+			text = File.read(filename)
+			instance_eval(text)
+			text.scan(/^\s*@(\w+)/) do
+				var_name = $~[1].to_sym
+				next if var_name == :defaults_file_description
+				next if var_name == :code_run_environment
+				unless rcp.variables.include? var_name or (CodeRunner::Trinity.rcp.variables.include? var_name) or (CodeRunner::Chease.rcp.variables.include? var_name or CodeRunner::Gryfx.rcp.variables.include? var_name or CodeRunner::Gs2.rcp.variables.include? var_name)
+					warning("---#{var_name}---, specified in #{File.expand_path(filename)}, is not a variable. This could be an error")
+				end
+			end
+		end
 
 		#  A hook which gets called when printing the standard run information to the screen using the status command.
 		def print_out_line
@@ -118,7 +141,11 @@ class CodeRunner
           require 'trinitycrdriver'
           require 'trinitycrdriver/optimisation'
           CodeRunner::Trinopt.run_optimisation(#@id)
-        rescue
+        rescue =>err
+          arr = NArray.int(1)
+          arr[0] = 0
+          comm.Bcast(arr,0)
+          raise err
         end
         arr = NArray.int(1)
         arr[0] = 0
@@ -163,12 +190,11 @@ EOF
         opt = CodeRunner::Trinity::Optimisation.new(
           @run.output, @run.search
         )
-        opt.results_hash[:start_time] = Time.now.to_i
         eputs 'Created opt'
-        @trinity_runner = CodeRunner.fetch_runner(Y: 'trinity_runs', X: '/dev/null', C: 'trinity', D: @run.trinity_defaults)
+        @trinity_runner = CodeRunner.fetch_runner(Y: 'trinity_runs', X: '/dev/null', C: 'trinity')
         @trinity_runner.nprocs = MPI::Comm::WORLD.size
         eputs 'Got trinity runner'
-        @chease_runner = CodeRunner.fetch_runner(Y: 'gs_runs', X: @run.chease_exec, C: 'chease', D: @run.gs_defaults)
+        @chease_runner = CodeRunner.fetch_runner(Y: 'gs_runs', X: @run.chease_exec, C: 'chease')
         @chease_runner.nprocs = '1'
         eputs 'Got chease runner'
         #Dir.chdir('trinity_runs'){@trinity_runner.run_class.use_new_defaults_file('rake_test_opt', 'ifspppl_chease_input.trin')}
