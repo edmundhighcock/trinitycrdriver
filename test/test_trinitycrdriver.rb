@@ -102,8 +102,11 @@ class TestTrinityOptimisation < Test::Unit::TestCase
     FileUtils.makedirs(trinopt_folder)
     FileUtils.cp('test/testtrinopt_defaults.rb',ENV['HOME'] + '/.coderunner/trinoptcrmod/defaults_files/testtrinopt_defaults.rb')
     Dir.chdir(trinopt_folder) do
-      CodeRunner.code_command('use_new_defaults_file("trinity_trinopt","../chease_opt/ifspppl_chease_input.trin")', C: 'trinity')
-      CodeRunner.code_command('use_new_defaults_file("chease_trinopt","../chease_opt_chease/chease_example.in")', C: 'chease')
+      CodeRunner.code_command('make_new_defaults_file("trinity_trinopt","../chease_opt/ifspppl_chease_input.trin")', C: 'trinity')
+      CodeRunner.code_command('make_new_defaults_file("chease_trinopt","../chease_opt_chease/chease_example.in")', C: 'chease')
+      File.open(ENV['HOME'] + '/.coderunner/trinoptcrmod/defaults_files/testtrinopt_defaults.rb', 'a') do |f| 
+        f.puts "@trinity_defaults_strings.push(#{File.read('trinity_trinopt_defaults.rb').inspect})\n@gs_defaults_strings.push(#{File.read('chease_trinopt_defaults.rb').inspect})"
+      end
       CodeRunner.submit(n: '1', C: 'trinopt', D: 'testtrinopt', X: "#$ruby_command", p: "{code_run_environment: %[export RUBYOPT=-I'#{Dir.pwd}/../../lib/']}") 
 
     end

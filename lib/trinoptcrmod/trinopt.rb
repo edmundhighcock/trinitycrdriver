@@ -186,6 +186,7 @@ EOF
         #@run = self.new(nil)
         #@run.instance_eval(File.read('code_runner_info.rb'))
         eputs 'Loaded run'
+        ep @run
         #raise "Can't find run with id #{id}; #{@runner.run_list.keys}" unless @run
         opt = CodeRunner::Trinity::Optimisation.new(
           @run.output, @run.search

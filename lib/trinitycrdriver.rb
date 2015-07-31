@@ -4,10 +4,10 @@ class CodeRunner
     module TrinityDriver                                                                         
       extend FFI::Library                                                                        
       ffi_lib ENV['TRINITY'] + '/libtrin.so'                                                     
-      attach_function :runtr, :run_trinity_c, [:string, :int], :void                       
+      attach_function :runtr, :run_trinity_c, [:string, :size_t], :void                       
     end 
     def run_trin_actual2(input_file, mpicomm_int)
-      puts 'calling TrinityDriver.runtr'
+      puts ['calling TrinityDriver.runtr',mpicomm_int.class]
       TrinityDriver.runtr(input_file, mpicomm_int)
     end
     private :run_trin_actual2

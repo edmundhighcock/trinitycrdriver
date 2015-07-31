@@ -4,7 +4,7 @@ source "http://rubygems.org"
    gem "coderunner", ">= 0.14.2"
    gem "text-data-tools", ">= 1.1.3"
 	 gem "gs2crmod", ">=0.11.33"
-	 gem "trinitycrmod", ">= 0.4.7"
+	 gem "trinitycrmod", ">= 0.7.11"
 	 gem "ruby-mpi", ">=0.2.0"
 	 gem "cheasecrmod", ">=0.1.0"
 
