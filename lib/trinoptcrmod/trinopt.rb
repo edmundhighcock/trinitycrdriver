@@ -97,6 +97,7 @@ class CodeRunner
 			new_run.update_submission_parameters(new_run.parameter_hash.inspect, false) if new_run.parameter_hash 
 			new_run.naming_pars.delete(:restart_id)
 			new_run.generate_run_name
+      raise "trinity_runs directory already exists" if FileTest.exist? new_run.directory + '/trinity_runs'
       FileUtils.ln_s(@directory + '/trinity_runs', new_run.directory + '/trinity_runs')
       FileUtils.ln_s(@directory + '/gs_runs', new_run.directory + '/gs_runs')
 		end	
