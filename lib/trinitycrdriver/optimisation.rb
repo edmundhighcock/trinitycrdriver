@@ -65,13 +65,18 @@ class CodeRunner::Trinity::Optimisation
     end
     def func(v)
       eputs 'Starting func'
+      print_pars = {}
       pars = {}
       pars[:chease] = {}
       pars[:trinity] = {}
+      pars[:trinity].absorb(@parameters_obj.trinity_pars) if @parameters_obj.trinity_pars
+      pars[:chease].absorb(@parameters_obj.gs_pars) if @parameters_obj.gs_pars
       for i in 0...v.size
         code, varname = @optimisation_variables[i]
         val = v[i]
         pars[code][varname] = val
+        print_pars[code] ||={}
+        print_pars[code][varname] = val
       end
       if not @first_run_done
         pars[:trinity][:ntstep] = @parameters_obj.ntstep_first
@@ -82,6 +87,7 @@ class CodeRunner::Trinity::Optimisation
         pars[:trinity][:nifspppl_initial] = -1
         pars[:trinity][:niter] = 3
       end
+
 
       pars[:chease][:ap] = [0.3,0.5,0.4,0.0,0.4,0.0,0.0]
       pars[:chease][:at] = [0.16,1.0,1.0,-1.1,-1.1]
@@ -180,7 +186,7 @@ class CodeRunner::Trinity::Optimisation
         p ['result is ', result]
         @first_run_done = true
         @results_hash[:func_calls] ||=[]
-        @results_hash[:func_calls].push result
+        @results_hash[:func_calls].push [print_pars, result]
         return -result
       end
 

@@ -34,7 +34,9 @@ class CodeRunner
       :nit,
       :ntstep_first,
       :ntstep,
-      :delete_final_run
+      :delete_final_run, 
+      :trinity_pars,
+      :gs_pars
     ]
 
 		@uses_mpi = true
@@ -256,6 +258,28 @@ EOF
 		def input_file_extension
 			''
 		end
+
+    def graphkit(name, options)
+      case name
+      when 'evolution'
+        results = eval(File.read(@directory + '/results'))
+        data = {}
+        results[:func_calls].each do |pars, res|
+          pars.each do |code,cpars|
+            cpars.each do |vname, val|
+              label = "#{code}_#{vname}"
+              data[label] ||= []
+              data[label].push val
+            end
+          end
+          data['results']||=[]
+          data['results'].push res
+        end
+        kit = GraphKit.quick_create(data.values)
+        data.keys.zip(GraphKit::AXES).each{|lbl,ax| kit.set(ax + :label, lbl)}
+        kit
+      end
+    end
 
 	end
 end
