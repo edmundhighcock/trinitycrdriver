@@ -1,6 +1,15 @@
 CodeRunner.setup_run_class('chease')
 
 class CodeRunner::Chease
+  # We hotwire the execute command so that it just
+  # runs it instead of doing a batch submission
+  def execute
+    system "#{executable}"
+  end
+end
+class CodeRunner::Ecom
+  # We hotwire the execute command so that it just
+  # runs it instead of doing a batch submission
   def execute
     system "#{executable}"
   end
@@ -14,7 +23,7 @@ class CodeRunner::Trinity::Optimisation
     attr_reader :optimisation_spec
     attr_reader :optimisation_variables
     attr_accessor :trinity_runner
-    attr_accessor :chease_runner
+    attr_accessor :gs_runner
     attr_accessor :parameters_obj
     attr_accessor :results_hash
     def initialize(optimised_quantity, optimisation_spec)
@@ -67,13 +76,19 @@ class CodeRunner::Trinity::Optimisation
       eputs 'Starting func'
       print_pars = {}
       pars = {}
-      pars[:chease] = {}
+      pars[:gs] = {}
       pars[:trinity] = {}
       pars[:trinity].absorb(@parameters_obj.trinity_pars) if @parameters_obj.trinity_pars
-      pars[:chease].absorb(@parameters_obj.gs_pars) if @parameters_obj.gs_pars
+      pars[:gs].absorb(@parameters_obj.gs_pars) if @parameters_obj.gs_pars
       for i in 0...v.size
         code, varname = @optimisation_variables[i]
         val = v[i]
+        code = case code
+               when :chease, :ecom
+                 :gs
+               else
+                 :trinity
+               end
         pars[code][varname] = val
         print_pars[code] ||={}
         print_pars[code][varname] = val
@@ -82,27 +97,34 @@ class CodeRunner::Trinity::Optimisation
         pars[:trinity][:ntstep] = @parameters_obj.ntstep_first
         pars[:trinity][:nifspppl_initial] = 500
         pars[:trinity][:niter] = 1
+        pars[:trinity][:convergetol] = -1.0
       else
         pars[:trinity][:ntstep] = @parameters_obj.ntstep
         pars[:trinity][:nifspppl_initial] = -1
         pars[:trinity][:niter] = 3
+        pars[:trinity][:convergetol] = 0.02
+        if @parameters_obj.gs_code == 'chease'
+          pars[:gs][:nblopt] = 0
+        end
       end
 
 
-      pars[:chease][:ap] = [0.3,0.5,0.4,0.0,0.4,0.0,0.0]
-      pars[:chease][:at] = [0.16,1.0,1.0,-1.1,-1.1]
-
+      # Must fix this soon!
+      if @parameters_obj.gs_code == 'chease'
+        pars[:gs][:ap] = [0.3,0.5,0.4,0.0,0.4,0.0,0.0]
+        pars[:gs][:at] = [0.16,1.0,1.0,-1.1,-1.1]
+      end
 
       trinity_runner.run_class.instance_variable_set(:@mpi_communicator, MPI::Comm::WORLD)
-      if false and trinity_runner.run_list.size > 0
-      else
+      #if false and trinity_runner.run_list.size > 0
+      #else
         if @first_run_done
           #crun.nppfun=4
           #crun.neqdsk=0
           #crun.expeq_file = trinity_runner.run_list[@id]
         end
         if not @replay
-          if not @first_run_done and chease_runner.run_list.size > 0
+          if not @first_run_done and gs_runner.run_list.size > 0
             #This means we are in a restart
             @replay = true
             @nrun = 1
@@ -110,8 +132,8 @@ class CodeRunner::Trinity::Optimisation
               eputs 'Removing final run: ' + trinity_runner.run_list.keys.max.to_s
               trinity_runner.conditions =  'id==' + trinity_runner.run_list.keys.max.to_s
               trinity_runner.destroy no_confirm: true
-              chease_runner.conditions =  'id==' + chease_runner.run_list.keys.max.to_s
-              chease_runner.destroy no_confirm: true
+              gs_runner.conditions =  'id==' + gs_runner.run_list.keys.max.to_s
+              gs_runner.destroy no_confirm: true
             end
           else
             @nrun = nil
@@ -124,25 +146,25 @@ class CodeRunner::Trinity::Optimisation
           if not run
             eputs 'Ending replay at ' + @nrun.to_s
             @replay = false
-            @id = @cid = @nrun-1
+            @id = @gsid = @nrun-1
           end
           @nrun += 1
         end
         if not @replay
-          crun = chease_runner.run_class.new(chease_runner)
+          gsrun = gs_runner.run_class.new(gs_runner)
           raise "No gs_defaults strings" unless @parameters_obj.gs_defaults_strings.size > 0
-          @parameters_obj.gs_defaults_strings.each{|prc| crun.instance_eval(prc)}
-          crun.update_submission_parameters(pars[:chease].inspect, false)
+          @parameters_obj.gs_defaults_strings.each{|prc| gsrun.instance_eval(prc)}
+          gsrun.update_submission_parameters(pars[:gs].inspect, false)
 
-          if chease_runner.run_list.size > 0
-            crun.restart_id = @cid
+          if gs_runner.run_list.size > 0
+            gsrun.restart_id = @gsid
           end
-          chease_runner.submit(crun)
-          crun = chease_runner.run_list[@cid = chease_runner.max_id]
-          crun.recheck
-          chease_runner.update
-          #chease_runner.print_out(0)
-          #FileUtils.cp(crun.directory + '/ogyropsi.dat', trinity_runner.root_folder + '/.')
+          gs_runner.submit(gsrun)
+          gsrun = gs_runner.run_list[@gsid = gs_runner.max_id]
+          gsrun.recheck
+          gs_runner.update
+          #gs_runner.print_out(0)
+          #FileUtils.cp(gsrun.directory + '/ogyropsi.dat', trinity_runner.root_folder + '/.')
 
           run = trinity_runner.run_class.new(trinity_runner)
 
@@ -150,7 +172,7 @@ class CodeRunner::Trinity::Optimisation
           run.instance_variable_set(:@set_flux_defaults_procs, []) unless run.instance_variable_get(:@set_flux_defaults_procs)
           @parameters_obj.trinity_defaults_strings.each{|prc| run.instance_eval(prc)}
           run.update_submission_parameters(pars[:trinity].inspect, false)
-          run.gs_folder = crun.directory
+          run.gs_folder = gsrun.directory
           run.evolve_geometry = ".true."
           eputs ['Set gs_folder', run.gs_folder]
           trinity_runner.run_class.instance_variable_set(:@delay_execution, true)
@@ -188,7 +210,7 @@ class CodeRunner::Trinity::Optimisation
         @results_hash[:func_calls] ||=[]
         @results_hash[:func_calls].push [print_pars, result]
         return -result
-      end
+      #end
 
 
       #v.square.sum

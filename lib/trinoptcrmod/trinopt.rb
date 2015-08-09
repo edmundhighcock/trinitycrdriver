@@ -25,19 +25,47 @@ class CodeRunner
 
     @variables = [
       :chease_exec,
+      :ecom_exec,
       :output,
       :search,
       :trinity_defaults,
       :trinity_defaults_strings,
       :gs_defaults,
-      :gs_defaults_strings,
+      :chease_defaults_strings,
+      :ecom_defaults_strings,
       :nit,
       :ntstep_first,
       :ntstep,
       :delete_final_run, 
       :trinity_pars,
-      :gs_pars
+      :chease_pars,
+      :ecom_pars,
+      :gs_code
     ]
+    def gs_defaults_strings
+      case @gs_code
+      when 'chease'
+        @chease_defaults_strings ||= @gs_defaults_strings # For backwards compatibility
+      else
+        @ecom_defaults_strings
+      end
+    end
+    def gs_defaults_strings=(strs)
+      @chease_defaults_strings = strs
+    end
+    def gs_pars
+      case @gs_code
+      when 'chease'
+        @chease_pars ||= @gs_pars
+      when 'ecom'
+        @gs_pars
+      end
+    end
+
+    # For backwards compatibility
+    def gs_pars=(pars)
+      @chease_pars = pars
+    end
 
 		@uses_mpi = true
 
@@ -50,7 +78,8 @@ class CodeRunner
 
     def initialize(*args)
       @trinity_defaults_strings = []
-      @gs_defaults_strings = []
+      @chease_defaults_strings = []
+      @ecom_defaults_strings = []
       super(*args)
     end
 		def evaluate_defaults_file(filename)
@@ -60,7 +89,7 @@ class CodeRunner
 				var_name = $~[1].to_sym
 				next if var_name == :defaults_file_description
 				next if var_name == :code_run_environment
-				unless rcp.variables.include? var_name or (CodeRunner::Trinity.rcp.variables.include? var_name) or (CodeRunner::Chease.rcp.variables.include? var_name or CodeRunner::Gryfx.rcp.variables.include? var_name or CodeRunner::Gs2.rcp.variables.include? var_name)
+				unless rcp.variables.include? var_name or (CodeRunner::Trinity.rcp.variables.include? var_name) or (CodeRunner::Chease.rcp.variables.include? var_name or CodeRunner::Gryfx.rcp.variables.include? var_name or CodeRunner::Gs2.rcp.variables.include? var_name or CodeRunner::Ecom.rcp.variables.include? var_name)
 					warning("---#{var_name}---, specified in #{File.expand_path(filename)}, is not a variable. This could be an error")
 				end
 			end
@@ -186,31 +215,36 @@ EOF
 
     def self.run_optimisation(id = ARGV[-1])
         eputs 'Fetching runner'
-        @runner = CodeRunner.fetch_runner(Y: '../../', U: true)
+        runner = CodeRunner.fetch_runner(Y: '../../', U: true)
         eputs 'Got runner'
         #@run = @runner.run_list[id.to_i]
-        @run = self.load(Dir.pwd, @runner)
+        run = self.load(Dir.pwd, runner)
         #@run = self.new(nil)
         #@run.instance_eval(File.read('code_runner_info.rb'))
         eputs 'Loaded run'
-        ep @run
+        #ep @run
         #raise "Can't find run with id #{id}; #{@runner.run_list.keys}" unless @run
         opt = CodeRunner::Trinity::Optimisation.new(
-          @run.output, @run.search
+          run.output, run.search
         )
         eputs 'Created opt'
-        @trinity_runner = CodeRunner.fetch_runner(Y: 'trinity_runs', X: '/dev/null', C: 'trinity')
-        @trinity_runner.nprocs = MPI::Comm::WORLD.size
+        trinity_runner = CodeRunner.fetch_runner(Y: 'trinity_runs', X: '/dev/null', C: 'trinity')
+        trinity_runner.nprocs = MPI::Comm::WORLD.size
         eputs 'Got trinity runner'
-        @chease_runner = CodeRunner.fetch_runner(Y: 'gs_runs', X: @run.chease_exec, C: 'chease')
-        @chease_runner.nprocs = '1'
-        eputs 'Got chease runner'
-        #Dir.chdir('trinity_runs'){@trinity_runner.run_class.use_new_defaults_file('rake_test_opt', 'ifspppl_chease_input.trin')}
-        #Dir.chdir(tfolderchease){@chease_runner.run_class.use_new_defaults_file('rake_test_opt_chease', 'chease_example.in')}
-        #assert_equal([:trinity, :powerin], opt.optimisation_variables[0])
-        opt.trinity_runner = @trinity_runner
-        opt.chease_runner = @chease_runner
-        opt.serial_optimise(:simplex, @run)
+        case run.gs_code
+        when 'chease'
+          gs_runner = CodeRunner.fetch_runner(Y: 'gs_runs', X: run.chease_exec, C: 'chease')
+          gs_runner.nprocs = '1'
+        when 'ecom'
+          gs_runner = CodeRunner.fetch_runner(Y: 'gs_runs', X: run.ecom_exec, C: 'ecom')
+          gs_runner.nprocs = '1'
+        else
+          raise "Unknown gs_code #{run.gs_code.inspect}"
+        end
+        eputs 'Got gs runner'
+        opt.trinity_runner = trinity_runner
+        opt.gs_runner = gs_runner
+        opt.serial_optimise(:simplex, run)
     end
 
 
