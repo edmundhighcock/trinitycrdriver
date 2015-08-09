@@ -294,9 +294,9 @@ EOF
 		end
 
     def graphkit(name, options)
+      results = eval(File.read(@directory + '/results'))
       case name
       when 'evolution'
-        results = eval(File.read(@directory + '/results'))
         data = {}
         results[:func_calls].each do |pars, res|
           pars.each do |code,cpars|
@@ -312,7 +312,36 @@ EOF
         kit = GraphKit.quick_create(data.values)
         data.keys.zip(GraphKit::AXES).each{|lbl,ax| kit.set(ax + :label, lbl)}
         kit
+      when 'iteration'
+        require 'tokfile/ogyropsi'
+        step = options[:step_index]
+        raise "Please specify step_index" unless step
+        iter, _trinstep = trinrunstep(step)[0]
+          kit = TokFile::Ogyropsi.new("#@directory/trinity_runs/v/id_#{iter}/chease/ogyropsi#{sprintf("%05d", step)}.dat").summary_graphkit
+          kit.gp.multiplot = " layout 3,3 title 'Iteration: #{iter}; Step: #{step}; Pars: #{results[:func_calls][iter-1][0]}; Result: #{results[:func_calls][iter-1][1].inspect}'"
+          kit[-1].gp.size = "ratio 1"
+          #pp 'kit', kit
+        return kit
       end
+    end
+
+    def trinstep_mappings
+      @trinstep_mappings = (
+        trinity_runner = CodeRunner.fetch_runner(Y: @directory + '/trinity_runs')
+        sizes = trinity_runner.run_list.values.sort_by{|r| r.id}.map{|r| r.get_completed_timesteps; r.completed_timesteps}
+        i = 0; cs = 0
+        sizes.inject({}){|h,sz| cs+=sz; h[i+=1]=cs; h}
+      )
+    end
+
+    def trinrunstep(overall_step)
+      p 'trinstep_mappings', trinstep_mappings
+      trinrun, cusum = trinstep_mappings.to_a.find{|t, c| c>=overall_step}
+      [trinrun, cusum-overall_step + 1]
+    end
+
+    def max_step
+      trinstep_mappings[-1][1]
     end
 
 	end
