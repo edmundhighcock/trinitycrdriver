@@ -96,20 +96,24 @@ class TestTrinityOptimisation < Test::Unit::TestCase
 
   def test_trinopt
     trinopt_folder = 'test/trinopt'
-    FileUtils.rm(ENV['HOME'] + '/.coderunner/trinitycrmod/defaults_files/trinity_trinopt_defaults.rb') rescue nil
-    FileUtils.rm(ENV['HOME'] +'/.coderunner/cheasecrmod/defaults_files/chease_trinopt_defaults.rb') rescue nil
-    FileUtils.rm_r(trinopt_folder) if FileTest.exist?(trinopt_folder)
-    FileUtils.makedirs(trinopt_folder)
-    FileUtils.cp('test/testtrinopt_defaults.rb',ENV['HOME'] + '/.coderunner/trinoptcrmod/defaults_files/testtrinopt_defaults.rb')
-    Dir.chdir(trinopt_folder) do
-      CodeRunner.code_command('make_new_defaults_file("trinity_trinopt","../chease_opt/ifspppl_chease_input.trin")', C: 'trinity')
-      CodeRunner.code_command('make_new_defaults_file("chease_trinopt","../chease_opt_chease/chease_example.in")', C: 'chease')
-      File.open(ENV['HOME'] + '/.coderunner/trinoptcrmod/defaults_files/testtrinopt_defaults.rb', 'a') do |f| 
-        f.puts "@trinity_defaults_strings.push(#{File.read('trinity_trinopt_defaults.rb').inspect})\n@gs_defaults_strings.push(#{File.read('chease_trinopt_defaults.rb').inspect})"
-      end
-      CodeRunner.submit(n: '1', C: 'trinopt', D: 'testtrinopt', X: "#$ruby_command", p: "{code_run_environment: %[export RUBYOPT=-I'#{Dir.pwd}/../../lib/']}") 
-      CodeRunner.submit(n: '1', C: 'trinopt', D: 'testtrinopt', X: "#$ruby_command", p: "{code_run_environment: %[export RUBYOPT=-I'#{Dir.pwd}/../../lib/'], restart_id: 1, nit: 3, delete_final_run: true}") 
+    #FileUtils.rm(ENV['HOME'] + '/.coderunner/trinitycrmod/defaults_files/trinity_trinopt_defaults.rb') rescue nil
+    #FileUtils.rm(ENV['HOME'] +'/.coderunner/cheasecrmod/defaults_files/chease_trinopt_defaults.rb') rescue nil
+    #FileUtils.rm_r(trinopt_folder) if FileTest.exist?(trinopt_folder)
+    #FileUtils.makedirs(trinopt_folder)
+    #FileUtils.cp('test/testtrinopt_defaults.rb',ENV['HOME'] + '/.coderunner/trinoptcrmod/defaults_files/testtrinopt_defaults.rb')
+    #Dir.chdir(trinopt_folder) do
+      #CodeRunner.code_command('make_new_defaults_file("trinity_trinopt","../chease_opt/ifspppl_chease_input.trin")', C: 'trinity')
+      #CodeRunner.code_command('make_new_defaults_file("chease_trinopt","../chease_opt_chease/chease_example.in")', C: 'chease')
+      #File.open(ENV['HOME'] + '/.coderunner/trinoptcrmod/defaults_files/testtrinopt_defaults.rb', 'a') do |f| 
+        #f.puts "@trinity_defaults_strings.push(#{File.read('trinity_trinopt_defaults.rb').inspect})\n@gs_defaults_strings.push(#{File.read('chease_trinopt_defaults.rb').inspect})"
+      #end
+      #CodeRunner.submit(n: '1', C: 'trinopt', D: 'testtrinopt', X: "#$ruby_command", p: "{code_run_environment: %[export RUBYOPT=-I'#{Dir.pwd}/../../lib/']}") 
+      #CodeRunner.submit(n: '1', C: 'trinopt', D: 'testtrinopt', X: "#$ruby_command", p: "{code_run_environment: %[export RUBYOPT=-I'#{Dir.pwd}/../../lib/'], restart_id: 1, nit: 3, delete_final_run: true}") 
 
-    end
+    #end
+    
+    #CodeRunner.plot_graph(Y: trinopt_folder, g: ['iteration;{step_index: 5}'], G: [], j: '1')
+    CodeRunner.film(Y: trinopt_folder, g: ['iteration'], G: [], j: '2', F: '{fn: "iteration", fa: [1,10], in: :step_index, fr: 3}', w: 'gp.term = "pngcairo size 1280,960"', M: 4)
+
   end
 end

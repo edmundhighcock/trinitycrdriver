@@ -7,6 +7,7 @@ source "http://rubygems.org"
 	 gem "trinitycrmod", ">= 0.7.11"
 	 gem "ruby-mpi", ">=0.2.0"
 	 gem "cheasecrmod", ">=0.1.0"
+   gem "tokfile", ">=0.0.3"
 
 # Add dependencies to develop your gem here.
 # Include everything needed to run rake, tests, features, etc.
