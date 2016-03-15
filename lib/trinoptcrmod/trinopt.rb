@@ -40,7 +40,8 @@ class CodeRunner
       :trinity_pars,
       :chease_pars,
       :ecom_pars,
-      :gs_code
+      :gs_code,
+      :convergence
     ]
     def gs_defaults_strings
       case @gs_code
@@ -80,6 +81,7 @@ class CodeRunner
       @trinity_defaults_strings = []
       @chease_defaults_strings = []
       @ecom_defaults_strings = []
+      @convergence = 0.05
       super(*args)
     end
 		def evaluate_defaults_file(filename)
@@ -298,7 +300,10 @@ EOF
       case name
       when 'evolution'
         data = {}
-        results[:func_calls].each do |pars, res|
+        pars_already_listed = []
+        results[:func_calls].reverse.each do |pars, res|
+          next if pars_already_listed.include? pars
+          pars_already_listed.push pars
           pars.each do |code,cpars|
             cpars.each do |vname, val|
               label = "#{code}_#{vname}"

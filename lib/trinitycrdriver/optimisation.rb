@@ -36,6 +36,7 @@ class CodeRunner::Trinity::Optimisation
       #@runner = CodeRunner.fetch_runner(
       #p ['optimisation_variables', @optimisation_variables]
       @results_hash = {}
+      @first_call = true
     end
     def dimension
       @optimisation_variables.size
@@ -73,7 +74,23 @@ class CodeRunner::Trinity::Optimisation
       
     end
     def func(v)
+      val = nil
+      count = 1
+      val_old, repeat = func_actual(v)
+      loop do
+        val, repeat = func_actual(v)
+        break if ((val_old - val)/val).abs < @parameters_obj.convergence
+        break if count > 4
+        val_old = val
+        #break if not repeat or (not @first_call and count > 1) or count > 4
+        count += 1
+      end
+      @first_call = false
+      return val
+    end
+    def func_actual(v)
       eputs 'Starting func'
+      repeat = false
       print_pars = {}
       pars = {}
       pars[:gs] = {}
@@ -95,24 +112,20 @@ class CodeRunner::Trinity::Optimisation
       end
       if not @first_run_done
         pars[:trinity][:ntstep] = @parameters_obj.ntstep_first
-        pars[:trinity][:nifspppl_initial] = 500
-        pars[:trinity][:niter] = 1
-        pars[:trinity][:convergetol] = -1.0
+        #pars[:trinity][:nifspppl_initial] = -1
+        pars[:trinity][:niter] = 2
+        #pars[:trinity][:convergetol] = -1.0
       else
         pars[:trinity][:ntstep] = @parameters_obj.ntstep
         pars[:trinity][:nifspppl_initial] = -1
         pars[:trinity][:niter] = 3
-        pars[:trinity][:convergetol] = 0.02
-        if @parameters_obj.gs_code == 'chease'
-          pars[:gs][:nblopt] = 0
-        end
       end
 
 
       # Must fix this soon!
       if @parameters_obj.gs_code == 'chease'
-        pars[:gs][:ap] = [0.3,0.5,0.4,0.0,0.4,0.0,0.0]
-        pars[:gs][:at] = [0.16,1.0,1.0,-1.1,-1.1]
+        #pars[:gs][:ap] = [0.3,0.5,0.4,0.0,0.4,0.0,0.0]
+        #pars[:gs][:at] = [0.16,1.0,1.0,-1.1,-1.1]
       end
 
       trinity_runner.run_class.instance_variable_set(:@mpi_communicator, MPI::Comm::WORLD)
@@ -151,14 +164,34 @@ class CodeRunner::Trinity::Optimisation
           @nrun += 1
         end
         if not @replay
+          # Create and initialize the gs run
           gsrun = gs_runner.run_class.new(gs_runner)
           raise "No gs_defaults strings" unless @parameters_obj.gs_defaults_strings.size > 0
           @parameters_obj.gs_defaults_strings.each{|prc| gsrun.instance_eval(prc)}
+          if gs_runner.run_list.size > 0 
+            #gsrun.restart_id = @gsid
+            if @parameters_obj.gs_code == 'chease'
+              eputs "Using previous pressure profile"
+              # We give CHEASE the pressure profile from the previous run.
+              pars[:gs][:nppfun] = 4
+              pars[:gs][:nfunc] = 4
+              gsrun.expeq_in=trinity_runner.combined_run_list[@id].directory + '/chease/EXPEQ.NOSURF'
+              # Don't optimise presssure profile.
+              pars[:gs][:nblopt] = 0
+            end
+          end
           gsrun.update_submission_parameters(pars[:gs].inspect, false)
 
-          if gs_runner.run_list.size > 0
-            gsrun.restart_id = @gsid
-          end
+          # Create and initialize the trinity run
+          run = trinity_runner.run_class.new(trinity_runner)
+          raise "No trinity_defaults_strings" unless @parameters_obj.trinity_defaults_strings.size > 0
+          run.instance_variable_set(:@set_flux_defaults_procs, []) unless run.instance_variable_get(:@set_flux_defaults_procs)
+          @parameters_obj.trinity_defaults_strings.each{|prc| run.instance_eval(prc)}
+          run.update_submission_parameters(pars[:trinity].inspect, false)
+
+          #if @parameters_obj.gs_code == 'chease' and (run.evolve_geometry and run.evolve_geometry.fortran_true?)
+            #pars[:gs][:nblopt] = 0
+          #end
           gs_runner.submit(gsrun)
           gsrun = gs_runner.run_list[@gsid = gs_runner.max_id]
           gsrun.recheck
@@ -166,14 +199,21 @@ class CodeRunner::Trinity::Optimisation
           #gs_runner.print_out(0)
           #FileUtils.cp(gsrun.directory + '/ogyropsi.dat', trinity_runner.root_folder + '/.')
 
-          run = trinity_runner.run_class.new(trinity_runner)
-
-          raise "No trinity_defaults_strings" unless @parameters_obj.trinity_defaults_strings.size > 0
-          run.instance_variable_set(:@set_flux_defaults_procs, []) unless run.instance_variable_get(:@set_flux_defaults_procs)
-          @parameters_obj.trinity_defaults_strings.each{|prc| run.instance_eval(prc)}
-          run.update_submission_parameters(pars[:trinity].inspect, false)
           run.gs_folder = gsrun.directory
-          run.evolve_geometry = ".true."
+          while (
+            not FileTest.exist? run.gs_folder + '/ogyropsi.dat' or
+            File.read(run.gs_folder + '/ogyropsi.dat') =~ /nan/i
+            )
+            #eputs "GS solver failed: using previous solution"
+
+            gs_runner.conditions = 'id == ' + @gsid.to_s
+            gs_runner.destroy(no_confirm: true)
+            gs_runner.conditions = nil
+            eputs "GS solver failed for #{v.inspect}: returning 10000"
+            return [10000, false]
+            #run.gs_folder = gs_runner.run_list[@gsid -= 1].directory
+          end
+          #run.evolve_geometry = ".true."
           eputs ['Set gs_folder', run.gs_folder]
           trinity_runner.run_class.instance_variable_set(:@delay_execution, true)
           if trinity_runner.run_list.size > 0
@@ -183,6 +223,8 @@ class CodeRunner::Trinity::Optimisation
           eputs 'Submitting run'
           trinity_runner.submit(run)
           run = trinity_runner.run_list[@id = trinity_runner.max_id]
+
+
           comm = MPI::Comm::WORLD
           arr = NArray.int(1)
           arr[0] = 1
@@ -203,13 +245,18 @@ class CodeRunner::Trinity::Optimisation
           run.recheck
           run.status = :Complete
           run.get_global_results
+          if (run.evolve_geometry and run.evolve_geometry.fortran_true?)
+            repeat = false
+          else
+            repeat = true
+          end
         end
-        result =  run.send(@optimised_quantity)
-        p ['result is ', result]
+        result =  run.instance_eval(@optimised_quantity)
+        p ['result is ', result, 'repeat: ', repeat]
         @first_run_done = true
         @results_hash[:func_calls] ||=[]
         @results_hash[:func_calls].push [print_pars, result]
-        return -result
+        return [-result, repeat]
       #end
 
 

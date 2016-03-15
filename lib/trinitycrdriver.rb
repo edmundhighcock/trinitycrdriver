@@ -5,10 +5,18 @@ class CodeRunner
       extend FFI::Library                                                                        
       ffi_lib ENV['TRINITY'] + '/libtrin.so'                                                     
       attach_function :runtr, :run_trinity_c, [:string, :size_t], :void                       
+      attach_function :runtr2, :run_trinity_test, [], :void                       
     end 
     def run_trin_actual2(input_file, mpicomm_int)
       puts ['calling TrinityDriver.runtr',mpicomm_int.class]
       TrinityDriver.runtr(input_file, mpicomm_int)
+    end
+    def self.run_trin_standalone(input_file)
+      require 'mpi'
+      MPI.Init
+      obj = CodeRunner::Trinity.new
+      obj.run_trinity(input_file, MPI::Comm::WORLD)
+      MPI.Finalize
     end
     private :run_trin_actual2
   end
