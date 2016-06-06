@@ -21,7 +21,7 @@ class CodeRunner
 
 		@code_long="CodeRunner/Trinity Optimisation Framework"
 
-		@run_info=[:time, :is_a_restart, :restart_id, :restart_run_name, :completed_steps, :percent_complete]
+		@run_info=[:time, :is_a_restart, :restart_id, :restart_run_name, :completed_steps, :percent_complete, :start_time]
 
     @variables = [
       :chease_exec,
@@ -41,7 +41,11 @@ class CodeRunner
       :chease_pars,
       :ecom_pars,
       :gs_code,
-      :convergence
+      :convergence,
+      :max_func_evals,
+      :use_previous_pressure,
+      :use_ifspppl_first,
+      :wall_mins_margin
     ]
     def gs_defaults_strings
       case @gs_code
@@ -82,6 +86,9 @@ class CodeRunner
       @chease_defaults_strings = []
       @ecom_defaults_strings = []
       @convergence = 0.05
+      @max_func_evals = 4
+      @wall_mins_margin = 5.0
+      @wall_mins = 1.0e10
       super(*args)
     end
 		def evaluate_defaults_file(filename)
@@ -128,6 +135,7 @@ class CodeRunner
 			new_run.run_name = nil
 			new_run.naming_pars = @naming_pars
 			new_run.update_submission_parameters(new_run.parameter_hash.inspect, false) if new_run.parameter_hash 
+      new_run.trinity_pars = @trinity_pars.absorb(new_run.trinity_pars) if @trinity_pars and new_run.trinity_pars
 			new_run.naming_pars.delete(:restart_id)
 			new_run.generate_run_name
       raise "trinity_runs directory already exists" if FileTest.exist? new_run.directory + '/trinity_runs'
@@ -212,6 +220,9 @@ EOF
     end
 
 		def check_parameters
+      if delete_final_run
+        raise CRFatal.new("Cancelled submission") unless Feedback.get_boolean("You have set delete_final_run which will cause the final run to be deleted. Is this correct?")
+      end
 		end
 
 
@@ -220,9 +231,10 @@ EOF
         runner = CodeRunner.fetch_runner(Y: '../../', U: true)
         eputs 'Got runner'
         #@run = @runner.run_list[id.to_i]
-        run = self.load(Dir.pwd, runner)
-        #@run = self.new(nil)
-        #@run.instance_eval(File.read('code_runner_info.rb'))
+        #run = self.load(Dir.pwd, runner)
+        run = self.new(runner)
+        run.read_info
+        run.start_time = Time.now.to_i
         eputs 'Loaded run'
         #ep @run
         #raise "Can't find run with id #{id}; #{@runner.run_list.keys}" unless @run
