@@ -46,13 +46,13 @@ class CodeRunner::Trinity::Optimisation
     optimisation_meth = case optimisation_method
                         when :simplex
                           FMinimizer::NMSIMPLEX
-                        else 
+                        else
                           raise "Unknown optimisation_method"
                         end
     @results_hash[:start_time] = Time.now.to_i
     opt = FMinimizer.alloc(optimisation_meth, @optimisation_variables.size)
     @parameters_obj = parameters_obj
-    catch(:out_of_time) do 
+    catch(:out_of_time) do
       func = Proc.new{|v, optimiser| optimiser.func(v)}
       eputs 'Created func'
       gsl_func = Function.alloc(func, dimension)
@@ -89,7 +89,7 @@ class CodeRunner::Trinity::Optimisation
         if ((val_old - val)/val).abs < @parameters_obj.convergence
           if @parameters_obj.use_ifspppl_first and not @ifspppl_converged
             @ifspppl_converged = true
-          else 
+          else
             break
           end
         end
@@ -135,7 +135,7 @@ class CodeRunner::Trinity::Optimisation
       #pars[:trinity][:niter] = 2
 
       # The line below assumes that the whole first run is done
-      # with ifspppl, in which case we don't want the timestep to get 
+      # with ifspppl, in which case we don't want the timestep to get
       # too large for the gryfx run afterwards.
       #pars[:trinity][:ntdelt_max] = 0.05
       #pars[:trinity][:convergetol] = -1.0
@@ -212,14 +212,14 @@ class CodeRunner::Trinity::Optimisation
       eputs "Remaining wall mins #{remaining_wall_mins}, wall mins #{@parameters_obj.wall_mins}, start time #{@parameters_obj.start_time}, time #{Time.now.to_i}, margin #{@parameters_obj.wall_mins_margin}"
       if remaining_wall_mins < @parameters_obj.wall_mins_margin
         eputs "Run out of time"
-        throw(:out_of_time) 
-      end 
+        throw(:out_of_time)
+      end
       eputs "Starting real run, @id = ",@id
       # Create and initialize the gs run
       gsrun = gs_runner.run_class.new(gs_runner)
       raise "No gs_defaults strings" unless @parameters_obj.gs_defaults_strings.size > 0
       @parameters_obj.gs_defaults_strings.each{|prc| gsrun.instance_eval(prc)}
-      if gs_runner.run_list.size > 0 
+      if gs_runner.run_list.size > 0
         #gsrun.restart_id = @gsid
         if @parameters_obj.gs_code == 'chease'
           last_converged = @id
@@ -236,7 +236,7 @@ class CodeRunner::Trinity::Optimisation
             pars[:gs][:nfunc] = 4
             #if prid = @parameters_obj.use_previous_pressure and not @first_trinity_run_completed
             # If the last trinity run did not converge we may want to run exactly
-            # the same case again, and in particular use the pressure profile from 
+            # the same case again, and in particular use the pressure profile from
             # the previous Trinity  run as input (as an unconverged pressure profile
             # can lead to a wacky GS solution)
             #gsrun.expeq_in=trinity_runner.combined_run_list[prid].directory + '/chease/EXPEQ.NOSURF'
@@ -285,8 +285,18 @@ class CodeRunner::Trinity::Optimisation
       eputs ['Set gs_folder', run.gs_folder]
       trinity_runner.run_class.instance_variable_set(:@delay_execution, true)
       if trinity_runner.run_list.size > 0
-        run.restart_id = @id
-      else
+        if (old_run = trinity_runner.run_list[@id]).is_converged?
+          eputs "Previous trinity run #@id converged: using profile as initial condition"
+          run.init_option="trinity"
+          ## We have to copy the file because we need to be able to access the original from R
+          #FileUtils.cp("../id_#@id/#{old_run.run_name}.out.nc", "../id_#@id/#{old_run.run_name}_copy.out.nc")
+          run.init_file = "../id_#@id/#{old_run.run_name}.out.nc"
+          run.init_time = old_run.new_netcdf_file.var("t").get[-1]
+          old_run.new_ncclose rescue nil # Make sure the file is closed
+        else
+          eputs "Previous trinity run #@id not converged: restarting"
+          run.restart_id = @id
+        end 
       end
       eputs 'Submitting run'
       run.wall_mins = remaining_wall_mins
