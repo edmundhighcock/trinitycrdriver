@@ -1,1 +1,1 @@
-require 'trinoptcrmod/trinopt'
+require 'corfucrmod/corfu'

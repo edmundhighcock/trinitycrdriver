@@ -14,7 +14,7 @@ class CodeRunner::Ecom
     system "#{executable}"
   end
 end
-class CodeRunner::Trinity::Optimisation
+class CodeRunner::Corfu::Optimisation
   include GSL::MultiMin
   # optimisation_spec is a hash of {:code_name => {:variable => [initial_guess, dimension_scale_factor]}}
   # dimension_scale_factor is just some estimate of the length scale in which the result

@@ -43,4 +43,4 @@ have_library("mpi")
 have_library("mpi_f90")
 have_library("mpi_f77")
 
-create_makefile("trinitycrdriver/trinitycrdriver")  
+create_makefile("corfucrmod/trinitycrdriver_ext")  

@@ -14,15 +14,17 @@ require 'rake'
 require 'jeweler'
 Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://guides.rubygems.org/specification-reference/ for more options
-  gem.name = "trinitycrdriver"
-  gem.homepage = "http://github.com/edmundhighcock/trinitycrdriver"
-  gem.license = "GPLv3"
-  gem.summary = %Q{A gem to allow coderunner to run the trinity code directly via a C interface.}
-  gem.description = %Q{A gem to allow coderunner to run the trinity code directly.}
+  gem.name = "corfucrmod"
+  gem.homepage = "http://github.com/edmundhighcock/corfucrmod"
+  gem.license = "GPLv3.0"
+  gem.summary = %Q{A gem which implements the CorFu Optimisation Framework.}
+  gem.description = %Q{CorFu, the Coderunner/Trinity Fusion Optimisation Framework
+    allows the optimisation of fusion performance using first principles
+    flux calculations via Trinity.}
   gem.email = "edmundhighcock@users.sourceforge.net"
   gem.authors = ["Edmund Highcock"]
 	gem.files.exclude 'test/**/*'
-	gem.extensions = %w[ext/trinitycrdriver/extconf.rb]
+	gem.extensions = %w[ext/corfucrmod/extconf.rb]
   # dependencies defined in Gemfile
 end
 Jeweler::RubygemsDotOrgTasks.new
@@ -47,15 +49,15 @@ Rake::RDocTask.new do |rdoc|
   version = File.exist?('VERSION') ? File.read('VERSION') : ""
 
   rdoc.rdoc_dir = 'rdoc'
-  rdoc.title = "trinitycrdriver #{version}"
+  rdoc.title = "corfucrmod #{version}"
   rdoc.rdoc_files.include('README*')
   rdoc.rdoc_files.include('lib/**/*.rb')
 end
 
-NAME = 'trinitycrdriver'
+NAME = 'corfucrmod'
 
 require "rake/extensiontask"
 
-Rake::ExtensionTask.new "trinitycrdriver" do |ext|
-	  ext.lib_dir = "lib/trinitycrdriver"
+Rake::ExtensionTask.new "corfucrmod" do |ext|
+	  ext.lib_dir = "lib/corfucrmod"
 end

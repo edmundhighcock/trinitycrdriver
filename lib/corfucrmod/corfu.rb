@@ -4,7 +4,7 @@ class CodeRunner
 	#
   CodeRunner.setup_run_class('trinity')
   CodeRunner.setup_run_class('chease')
-	class Trinopt < Run
+	class Corfu < Run
 
 
 		# Where this file is
@@ -183,10 +183,10 @@ class CodeRunner
         begin
           require 'coderunner'
           CodeRunner.setup_run_class('trinity')
-          CodeRunner.setup_run_class('trinopt')
-          require 'trinitycrdriver'
-          require 'trinitycrdriver/optimisation'
-          CodeRunner::Trinopt.run_optimisation(#@id)
+          CodeRunner.setup_run_class('corfu')
+          #require 'corfucrmod'
+          require 'corfucrmod/trinitycrdriver'
+          CodeRunner::Corfu.run_optimisation(#@id)
         rescue =>err
           arr = NArray.int(1)
           arr[0] = 0
@@ -197,7 +197,7 @@ class CodeRunner
         arr[0] = 0
         comm.Bcast(arr,0)
       else
-        require 'trinitycrdriver'
+        require 'corfucrmod/trinitycrdriver'
         arr = NArray.int(1)
         puts "Proc \#{comm.rank} waiting for message"
         loop do
@@ -238,7 +238,7 @@ EOF
         eputs 'Loaded run'
         #ep @run
         #raise "Can't find run with id #{id}; #{@runner.run_list.keys}" unless @run
-        opt = CodeRunner::Trinity::Optimisation.new(
+        opt = CodeRunner::Corfu::Optimisation.new(
           run.output, run.search
         )
         eputs 'Created opt'
@@ -363,4 +363,5 @@ EOF
 
 	end
 end
+require 'corfucrmod/optimisation'
 

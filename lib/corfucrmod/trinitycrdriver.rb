@@ -21,7 +21,7 @@ class CodeRunner
     private :run_trin_actual2
   end
 end
-require 'trinitycrdriver/trinitycrdriver'
+require 'corfucrmod/trinitycrdriver_ext'
 require 'mpi'
 
 class CodeRunner::Trinity
