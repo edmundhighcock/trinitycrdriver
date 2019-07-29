@@ -10,7 +10,7 @@ struct _Comm {
 		bool free;
 };
 
-static VALUE corfucrmod_run_trinity(VALUE self, VALUE input_file_name, VALUE mpi_comm){
+static VALUE trinitycrdriver_ext_run_trinity(VALUE self, VALUE input_file_name, VALUE mpi_comm){
 	printf("RUNNING TRINITY!!!\n\n");
 
 	struct _Comm *comm;
@@ -34,7 +34,7 @@ static VALUE corfucrmod_run_trinity(VALUE self, VALUE input_file_name, VALUE mpi
 
 }
 
-void Init_corfucrmod()
+void Init_trinitycrdriver_ext()
 {
 	
 	VALUE ctrinity;
@@ -46,7 +46,7 @@ void Init_corfucrmod()
 	ccode_runner =  RGET_CLASS_TOP("CodeRunner");
 	/*VALUE ctrinity =  RGET_CLASS_TOP("CodeRunner");*/
   ctrinity	= RGET_CLASS(ccode_runner, "Trinity");
-	rb_define_method(ctrinity, "run_trinity", corfucrmod_run_trinity, 2);
+	rb_define_method(ctrinity, "run_trinity", trinitycrdriver_ext_run_trinity, 2);
 		/*rb_define_class_under(ccode_runner, "Trinity",*/
 		/*RGET_CLASS(*/
 		/*RGET_CLASS(ccode_runner, "Run"), */
